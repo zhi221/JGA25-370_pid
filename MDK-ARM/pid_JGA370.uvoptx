@@ -158,7 +158,12 @@
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>GPIOTEST</ItemText>
+          <ItemText>EncoderCount</ItemText>
+        </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>MotorSpeed</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
