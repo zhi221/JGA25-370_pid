@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "pid.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -26,7 +26,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define ENCODERMAX 65535
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -65,17 +65,21 @@ struct keys key;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-float goal_speed=0.00;
-
+float goal_speed=1.00;
+float MotorSpeed = 0.00;
+float pwm_value = 0.00;
+short EncoderCount = 0;
+PidTypeDef pid_motor;
+float PID_params[3] = {10.0f, 0.75f, 0.1f}; 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 { 
-	if(htim->Instance==TIM3)   //10ms定时�?
+	if(htim->Instance==TIM3)   //10ms定时�??
 	{
 		key.key_check =HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin);
 		
 			switch(key.key_juade)
 			{
-				case 0:										//�?测按键按�?
+				case 0:										//�??测按键按�??
 				{
 					if(key.key_check==0)
 					{key.key_juade =1;}
@@ -90,7 +94,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 					else key.key_juade =0;
 				}break ;
 				
-				case 2:										//按键释放状�??
+				case 2:										//按键释放状�??
 				{ 
 					if(key.key_check==1)
 					{key.key_juade =0;
@@ -107,6 +111,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			goal_speed +=1;
 			key.key_flag =0;
 		}
+    pwm_value = PID_Calc1(&pid_motor, MotorSpeed, goal_speed);
+		__HAL_TIM_SET_COMPARE(&htim1 ,TIM_CHANNEL_4 ,pwm_value);
   }
 }
 /* USER CODE END 0 */
@@ -144,15 +150,25 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  PID_init(&pid_motor, PID_POSITION, PID_params, 100.0f, 50.0f);
+  HAL_TIM_PWM_Start(&htim1 ,TIM_CHANNEL_4 ); 
+  HAL_TIM_PWM_Start (&htim2,TIM_CHANNEL_ALL );
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);
   HAL_TIM_Base_Start_IT (&htim2);
 	HAL_TIM_Base_Start_IT (&htim3);	
+	HAL_GPIO_WritePin (GPIOA ,GPIO_PIN_3,GPIO_PIN_SET );
+  HAL_GPIO_WritePin (GPIOA ,GPIO_PIN_4,GPIO_PIN_RESET );
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {
+  { 
+		EncoderCount =(short)__HAL_TIM_GET_COUNTER (&htim2);
+		MotorSpeed =(-1)*(float)EncoderCount *10/21.3/11/4;
+    __HAL_TIM_SetCounter(&htim2, 0);
+		HAL_Delay (180);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -221,7 +237,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 72-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 10000-1;
+  htim1.Init.Period = 100-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -371,6 +387,16 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3|GPIO_PIN_4, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : PA3 PA4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : KEY_Pin */
   GPIO_InitStruct.Pin = KEY_Pin;

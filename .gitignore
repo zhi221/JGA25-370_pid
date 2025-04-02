@@ -15,8 +15,9 @@
 *.scvd
 *.uvguix
 *.dbg*
-*.uvguix.*
-.mxproject
+*.uvguix.
+*.mxproject
+.vscode
  
 RTE/
 Templates/
